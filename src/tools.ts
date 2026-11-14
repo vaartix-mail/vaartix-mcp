@@ -4,9 +4,9 @@ import type {
   ScopeChallengeHandler,
 } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { VaartixApiError } from './client.js';
+import { VaartixApiError, VERSION } from './client.js';
 
-export { VaartixApiError };
+export { VaartixApiError, VERSION };
 
 /**
  * The tools the Vaartix MCP server offers, defined once and shared by the stdio server in this
