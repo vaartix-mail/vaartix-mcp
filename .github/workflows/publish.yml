@@ -1,0 +1,35 @@
+name: Publish to npm
+
+# Runs when a tag like v0.1.0 is pushed. Stages the release on npm with trusted publishing (OIDC):
+# no npm token is stored anywhere. The version stays hidden until a maintainer approves it with
+# their npm 2FA code (`npm stage approve`), so nobody can release through GitHub alone.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - name: Tag matches package version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME does not match version $version"; exit 1; }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      # Staged publishing needs a recent npm.
+      - run: npm install -g npm@latest
+      - run: npm stage publish
