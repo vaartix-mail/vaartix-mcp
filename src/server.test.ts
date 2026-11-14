@@ -1,7 +1,12 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { describe, expect, it } from 'vitest';
+import {
+  Client,
+  InMemoryTransport,
+  StreamableHTTPClientTransport,
+} from '@modelcontextprotocol/client';
+import { createMcpHandler, McpServer } from '@modelcontextprotocol/server';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createServer } from './server.js';
+import { type ApiRequest, registerTools, TOOLS } from './tools.js';
 
 interface Call {
   method: string;
@@ -24,16 +29,44 @@ function fakeFetch(status = 200, payload: unknown = { id: 'em_abc123' }) {
   return { fetch, calls };
 }
 
-async function connect(fetch: typeof globalThis.fetch) {
-  const server = createServer({
-    apiKey: 'vx_test_key',
-    baseUrl: 'https://api.example.test/',
-    fetch,
+const closers: (() => Promise<void>)[] = [];
+afterEach(async () => {
+  while (closers.length) await closers.pop()?.();
+});
+
+/** Each HTTP request the client made: its MCP-Protocol-Version and Mcp-Method headers. */
+const wire: { version: string | null; method: string | null }[] = [];
+
+/** A client on protocol revision 2026-07-28, served in-process by the same handler as HTTP. */
+async function connectServer(build: () => McpServer) {
+  const handler = createMcpHandler(build);
+  wire.length = 0;
+  const transport = new StreamableHTTPClientTransport(new URL('http://mcp.test/'), {
+    fetch: (url, init) => {
+      const request = new Request(url, init);
+      wire.push({
+        version: request.headers.get('mcp-protocol-version'),
+        method: request.headers.get('mcp-method'),
+      });
+      return handler.fetch(request);
+    },
   });
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: 'test', version: '1.0.0' });
-  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  const client = new Client(
+    { name: 'test', version: '1.0.0' },
+    { versionNegotiation: { mode: 'auto' } },
+  );
+  await client.connect(transport);
+  closers.push(
+    () => client.close(),
+    () => handler.close(),
+  );
   return client;
+}
+
+function connect(fetch: typeof globalThis.fetch) {
+  return connectServer(() =>
+    createServer({ apiKey: 'vx_test_key', baseUrl: 'https://api.example.test/', fetch }),
+  );
 }
 
 function first(calls: Call[]): Call {
@@ -51,12 +84,14 @@ describe('vaartix-mcp', () => {
   it('lists the tools with annotations', async () => {
     const client = await connect(fakeFetch().fetch);
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual([
-      'cancel_email',
+    expect(tools.map((t) => t.name)).toEqual([
+      'send_email',
+      'send_batch',
       'get_email',
       'list_emails',
-      'send_batch',
-      'send_email',
+      'cancel_email',
+      'list_domains',
+      'get_domain',
     ]);
     expect(tools.find((t) => t.name === 'get_email')?.annotations?.readOnlyHint).toBe(true);
     expect(tools.find((t) => t.name === 'send_email')?.annotations?.readOnlyHint).toBeFalsy();
@@ -168,5 +203,103 @@ describe('vaartix-mcp', () => {
     const result = await client.callTool({ name: 'get_email', arguments: { id: 'em_abc123' } });
     expect(result.isError).toBe(true);
     expect(text(result)).toContain('Could not reach the Vaartix API');
+  });
+
+  it('speaks protocol revision 2026-07-28 over HTTP', async () => {
+    const client = await connect(fakeFetch().fetch);
+    await client.listTools();
+    expect(wire.length).toBeGreaterThan(0);
+    expect(wire.every((r) => r.version === '2026-07-28')).toBe(true);
+    expect(wire.some((r) => r.method === 'initialize')).toBe(false);
+    expect(wire.some((r) => r.method === 'tools/list')).toBe(true);
+  });
+
+  it('gets and lists domains', async () => {
+    const { fetch, calls } = fakeFetch(200, { data: [] });
+    const client = await connect(fetch);
+    await client.callTool({ name: 'list_domains', arguments: {} });
+    await client.callTool({ name: 'get_domain', arguments: { id: 'dom_5bvatg1v837anztd' } });
+    const bad = await client.callTool({ name: 'get_domain', arguments: { id: 'em_abc' } });
+    expect(bad.isError).toBe(true);
+    expect(calls.map((c) => `${c.method} ${c.url.pathname}`)).toEqual([
+      'GET /domains',
+      'GET /domains/dom_5bvatg1v837anztd',
+    ]);
+  });
+
+  it('serves clients that open with initialize (protocol revisions before 2026-07-28)', async () => {
+    const { fetch, calls } = fakeFetch();
+    const server = createServer({ apiKey: 'k', baseUrl: 'https://api.example.test', fetch });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'legacy', version: '1.0.0' });
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    closers.push(() => client.close());
+    const { tools } = await client.listTools();
+    expect(tools).toHaveLength(TOOLS.length);
+    await client.callTool({ name: 'get_email', arguments: { id: 'em_abc123' } });
+    expect(first(calls).url.pathname).toBe('/emails/em_abc123');
+  });
+});
+
+describe('shared tool definitions', () => {
+  const sample: Record<string, Record<string, unknown>> = {
+    send_email: { from: 'a@example.com', to: 'b@example.com', subject: 'S', text: 'T' },
+    send_batch: {
+      emails: [{ from: 'a@example.com', to: 'b@example.com', subject: 'S', text: 'T' }],
+    },
+    get_email: { id: 'em_abc123' },
+    list_emails: {},
+    cancel_email: { id: 'em_abc123' },
+    list_domains: {},
+    get_domain: { id: 'dom_abc123' },
+  };
+
+  it('each tool calls only the routes it declares, and has a scope', async () => {
+    for (const tool of TOOLS) {
+      const seen: string[] = [];
+      const request: ApiRequest = async (method, path) => {
+        seen.push(`${method} ${path}`);
+        return {};
+      };
+      const input = sample[tool.name];
+      expect(input, tool.name).toBeDefined();
+      await tool.run(tool.inputSchema.parse(input) as Record<string, unknown>, request);
+      const patterns = tool.routes.map((route) => {
+        const [method, pattern] = route.split(' ');
+        return new RegExp(`^${method} ${pattern?.replace(/:[a-z]+/g, '[^/]+')}$`);
+      });
+      expect(seen.length, tool.name).toBeGreaterThan(0);
+      for (const call of seen)
+        expect(
+          patterns.some((p) => p.test(call)),
+          call,
+        ).toBe(true);
+      expect(['send', 'read']).toContain(tool.scope);
+      expect(tool.annotations.readOnlyHint === true).toBe(tool.scope === 'read');
+    }
+  });
+
+  it('registerTools lets the host give each tool its own request function', async () => {
+    const used: string[] = [];
+    const client = await connectServer(() => {
+      const server = new McpServer({ name: 'hosted', version: '1.0.0' });
+      registerTools(
+        server,
+        async () => {
+          throw new Error('the default request function should not be used');
+        },
+        {
+          requestFor: (tool) => async (method, path) => {
+            used.push(`${tool.name}: ${method} ${path}`);
+            return { ok: true };
+          },
+        },
+      );
+      return server;
+    });
+    const result = await client.callTool({ name: 'list_domains', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    expect(used).toEqual(['list_domains: GET /domains']);
   });
 });

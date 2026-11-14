@@ -18,6 +18,8 @@ Let Claude, Cursor and other AI tools send and look up transactional email throu
 | `get_email` | One email with its status and event timeline | Full access |
 | `list_emails` | Recent emails, filtered by status, search text or days | Full access |
 | `cancel_email` | Cancel a scheduled email | Full access |
+| `list_domains` | Your sending domains, with verification status and DNS records | Full access |
+| `get_domain` | One domain: whether it's verified and the DNS records it needs | Full access |
 
 Sending tools deliver **real email**. Most MCP clients ask you to approve each tool call, so check
 the recipients and content before you approve.
@@ -70,6 +72,8 @@ claude mcp add vaartix --env VAARTIX_API_KEY=vx_your_api_key -- npx -y vaartix-m
 
 Any MCP client that runs stdio servers works: run `npx -y vaartix-mcp` with `VAARTIX_API_KEY` set.
 
+It needs Node.js 20 or later.
+
 ## Configuration
 
 | Variable | Required | Default |
@@ -88,6 +92,21 @@ npm test          # tool tests against a fake API
 npm run lint
 npm run typecheck
 npm run build     # outputs dist/index.js (the vaartix-mcp command)
+```
+
+## Using the tool definitions
+
+The tools are defined once in `vaartix-mcp/tools` (name, input schema, annotations, the permission
+each needs and the API routes it calls), so other MCP servers can offer exactly the same tools:
+
+```ts
+import { McpServer } from '@modelcontextprotocol/server';
+import { registerTools, TOOLS } from 'vaartix-mcp/tools';
+
+const server = new McpServer({ name: 'vaartix', version: '1.0.0' });
+registerTools(server, async (method, path, options) => {
+  // Call the Vaartix API and return the parsed JSON.
+});
 ```
 
 ## License
