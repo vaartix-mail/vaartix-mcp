@@ -31,8 +31,8 @@ batch, and no attachments or custom headers. Email bodies come back only when as
 ## Setup
 
 You need a Vaartix API key from [app.vaartix.com](https://app.vaartix.com) → API keys. Create a
-key just for your AI tool, and choose the **AI agent** option when you create it. An AI agent key
-starts with safe limits:
+key just for your AI tool. When asked "Is this key for an AI agent or MCP server?", choose
+**Yes, an AI agent**. An AI agent key starts with safe limits:
 
 - test addresses only, until you add the recipients it may email
 - 20 emails an hour and 50 a day
