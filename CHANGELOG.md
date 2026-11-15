@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1
+
+- **Sends waiting for approval are reported as such.** A Vaartix connection can require a person's
+  approval before each send. The API then answers `status: "pending_approval"` with an approval ID
+  and an expiry, and nothing is sent until an owner or admin approves it. `send_email` and
+  `send_batch` now say exactly that, and tell the assistant not to send again, instead of
+  "queued for sending". Exported as `sentSummary(data, queued)`.
+
 ## 0.3.0
 
 **Behaviour change: `get_email` no longer returns the email's body by default.** It returns the

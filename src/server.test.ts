@@ -13,6 +13,7 @@ import {
   registerTools,
   SCOPES,
   scopesFor,
+  sentSummary,
   TOOLS,
   untrustedContent,
 } from './tools.js';
@@ -163,6 +164,35 @@ describe('vaartix-mcp', () => {
     expect(first(calls).url.pathname).toBe('/emails/batch');
     expect(Array.isArray(first(calls).body)).toBe(true);
     expect((first(calls).body as unknown[]).length).toBe(2);
+  });
+
+  it('says a send is waiting for approval, not that it was sent', async () => {
+    const pending = {
+      status: 'pending_approval',
+      approvalId: 'apr_1',
+      expiresAt: '2026-11-16T07:00:00.000Z',
+    };
+    const { fetch } = fakeFetch(202, pending);
+    const client = await connect(fetch);
+    const one = await client.callTool({
+      name: 'send_email',
+      arguments: { from: 'hi@example.com', to: 'a@example.com', subject: 'A', text: 'a' },
+    });
+    expect(one.isError).toBeFalsy();
+    expect(text(one)).toContain('Not sent yet');
+    expect(text(one)).toContain('apr_1');
+    expect(text(one)).toContain('2026-11-16T07:00:00.000Z');
+    expect(text(one)).not.toContain('queued for sending');
+    const batch = await client.callTool({
+      name: 'send_batch',
+      arguments: {
+        emails: [{ from: 'hi@example.com', to: 'a@example.com', subject: 'A', text: 'a' }],
+      },
+    });
+    expect(text(batch)).toContain('Not sent yet');
+    expect(sentSummary({ id: 'em_1' }, 'Email queued for sending.')).toBe(
+      'Email queued for sending.',
+    );
   });
 
   it('reports API errors as tool errors with the API message', async () => {

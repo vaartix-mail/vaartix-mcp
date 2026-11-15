@@ -1,6 +1,6 @@
 {
   "name": "vaartix-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "MCP server for Vaartix: let Claude, Cursor and other AI tools send and track transactional email",
   "license": "MIT",
   "type": "module",
