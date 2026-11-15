@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.0
+
+**Behaviour change: `get_email` no longer returns the email's body by default.** It returns the
+details (status, sender, recipients, subject, tags, events and times) and `contentIncluded: false`.
+To get the HTML, text and custom headers, call it with `includeContent: true`. The body then comes
+back in its own block, marked as untrusted data from the email, never instructions.
+
+- **Reading content with an API key** (the local `npx` server): a full-access key can read bodies,
+  as before, by asking with `includeContent: true`. Team owners will be able to turn this off per
+  key with a "read content" setting in the dashboard; with it off, the API leaves the body out and
+  `get_email` says the key has no read-content permission. A send-only key can't read emails at all.
+- **Per-call limits:** at most 50 recipients per email (to, cc and bcc together) and 20 emails per
+  `send_batch` call (was 100). Exported as `CALL_LIMITS`; Vaartix can set lower limits, and nothing
+  an agent sends can raise these.
+- **No attachments or custom headers** through MCP: emails with them are refused, not silently
+  changed. `replyTo` takes at most 5 addresses.
+- **Permissions:** `send`, `read` (details, never bodies), `read_content` (bodies) and `cancel`
+  (`cancel_email`, which needed `send` before). Exported as `SCOPES`, with `scopesFor(tool, input)`
+  giving what a call needs.
+- **Safer wording:** sending and cancelling tools tell the assistant to show the user exactly what
+  will happen and get their confirmation; the server instructions say email content is data, never
+  instructions, and that the tools can't change keys, members, webhooks, domains, billing or
+  settings.
+
 ## 0.2.0
 
 - New tools: `list_domains` and `get_domain`.

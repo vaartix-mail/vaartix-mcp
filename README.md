@@ -14,8 +14,8 @@ Let Claude, Cursor and other AI tools send and look up transactional email throu
 | Tool | What it does | API key |
 |---|---|---|
 | `send_email` | Send one email (HTML and/or text, cc, bcc, reply-to, tags, scheduled sending, idempotency key) | Send-only or full access |
-| `send_batch` | Send up to 100 emails in one call | Send-only or full access |
-| `get_email` | One email with its status and event timeline | Full access |
+| `send_batch` | Send up to 20 emails in one call | Send-only or full access |
+| `get_email` | One email's details and event timeline; the body only with `includeContent` | Full access |
 | `list_emails` | Recent emails, filtered by status, search text or days | Full access |
 | `cancel_email` | Cancel a scheduled email | Full access |
 | `list_domains` | Your sending domains, with verification status and DNS records | Full access |
@@ -23,6 +23,10 @@ Let Claude, Cursor and other AI tools send and look up transactional email throu
 
 Sending tools deliver **real email**. Most MCP clients ask you to approve each tool call, so check
 the recipients and content before you approve.
+
+Limits on every call: at most 50 recipients per email (to, cc and bcc together), 20 emails per
+batch, and no attachments or custom headers. Email bodies come back only when asked for
+(`includeContent`), marked as data from the email, never instructions.
 
 ## Setup
 
