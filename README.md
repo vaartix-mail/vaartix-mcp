@@ -30,9 +30,20 @@ batch, and no attachments or custom headers. Email bodies come back only when as
 
 ## Setup
 
-You need a Vaartix API key from [app.vaartix.com](https://app.vaartix.com) → API keys. For sending
-only, create a **send-only key limited to your domain**. Use a full-access key only if you also want
-the AI tool to read your email logs.
+You need a Vaartix API key from [app.vaartix.com](https://app.vaartix.com) → API keys. Create a
+key just for your AI tool, and choose the **AI agent** option when you create it. An AI agent key
+starts with safe limits:
+
+- test addresses only, until you add the recipients it may email
+- 20 emails an hour and 50 a day
+- email bodies are never returned (read content is off)
+
+Change these at any time with **Limits** on the API keys page. Widening a limit asks for a fresh
+confirmation code; narrowing it doesn't. Limits are enforced by the Vaartix API itself, so they hold
+whatever the AI tool asks for.
+
+For sending only, make it a **send-only key limited to your domain**. Use a full-access key only if
+you also want the AI tool to read your email logs. Don't reuse your app's production key.
 
 ### Claude Desktop
 
