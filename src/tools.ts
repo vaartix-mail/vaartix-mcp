@@ -218,6 +218,18 @@ async function call(
   }
 }
 
+/**
+ * What a send call returns. A Vaartix connection can require a person's approval before anything
+ * is sent: then the API answers `status: "pending_approval"`, nothing has been sent yet, and the
+ * assistant must say so rather than report the email as sent.
+ */
+export function sentSummary(data: unknown, queued: string): string {
+  const d = (data ?? {}) as { status?: unknown; approvalId?: unknown; expiresAt?: unknown };
+  if (d.status !== 'pending_approval') return queued;
+  const by = typeof d.expiresAt === 'string' ? ` before ${d.expiresAt}` : '';
+  return `Not sent yet: this connection needs a person's approval for every send. A team owner or admin must approve it in the Vaartix dashboard${by}, or it expires unsent. Tell the user it is waiting for approval, and don't send it again. Approval ID: ${String(d.approvalId ?? 'unknown')}.`;
+}
+
 const path = (template: string, id: string) => template.replace(/:id\b/, encodeURIComponent(id));
 
 /** Every tool, in the order tools/list returns them (the spec asks for a stable order). */
@@ -259,7 +271,7 @@ export const TOOLS: readonly ToolDefinition[] = [
             body: withoutUndefined(input),
             idempotencyKey: idempotencyKey as string | undefined,
           }),
-        'Email queued for sending.',
+        (data) => sentSummary(data, 'Email queued for sending.'),
       );
     },
   },
@@ -288,7 +300,7 @@ export const TOOLS: readonly ToolDefinition[] = [
             body: list.map(withoutUndefined),
             idempotencyKey: idempotencyKey as string | undefined,
           }),
-        `${list.length} email(s) queued for sending.`,
+        (data) => sentSummary(data, `${list.length} email(s) queued for sending.`),
       );
     },
   },
