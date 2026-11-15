@@ -1,5 +1,5 @@
 export const DEFAULT_BASE_URL = 'https://api.vaartix.com';
-export const VERSION = '0.3.1';
+export const VERSION = '0.3.2';
 
 export interface ClientOptions {
   apiKey: string;

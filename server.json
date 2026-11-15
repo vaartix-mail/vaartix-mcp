@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.vaartix/mcp",
+  "title": "Vaartix",
+  "description": "Send transactional email from India and check delivery, emails and domains in Vaartix.",
+  "version": "0.3.2",
+  "websiteUrl": "https://vaartix.com/docs/guides/mcp-hosted/",
+  "repository": {
+    "url": "https://github.com/vaartix-mail/vaartix-mcp",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.vaartix.com"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "vaartix-mcp",
+      "version": "0.3.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "VAARTIX_API_KEY",
+          "description": "A Vaartix API key. Create it as an AI agent key in the dashboard (API keys).",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "VAARTIX_BASE_URL",
+          "description": "API base URL. Leave unset for https://api.vaartix.com.",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
