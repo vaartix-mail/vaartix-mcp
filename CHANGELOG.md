@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2
+
+- **Listed in the MCP Registry as `com.vaartix/mcp`.** `package.json` now has `mcpName`, which
+  the registry checks to confirm we publish this npm package. `server.json` describes both ways
+  to use Vaartix: the hosted server at `https://mcp.vaartix.com` (sign in, no API key) and this
+  package over stdio with `VAARTIX_API_KEY`. No change to the tools.
+
 ## 0.3.1
 
 - **Sends waiting for approval are reported as such.** A Vaartix connection can require a person's
