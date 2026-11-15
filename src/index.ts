@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { createServer } from './server.js';
 
 const apiKey = process.env.VAARTIX_API_KEY?.trim();
@@ -10,5 +10,6 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const server = createServer({ apiKey, baseUrl: process.env.VAARTIX_BASE_URL || undefined });
-await server.connect(new StdioServerTransport());
+const baseUrl = process.env.VAARTIX_BASE_URL || undefined;
+// Serves clients on protocol revision 2026-07-28 and on the earlier, initialize-based revisions.
+serveStdio(() => createServer({ apiKey, baseUrl }));
