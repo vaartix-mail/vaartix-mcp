@@ -126,4 +126,4 @@ registerTools(server, async (method, path, options) => {
 
 ## License
 
-MIT. Vaartix is a product of NAP Designs, Bengaluru.
+MIT. Vaartix is a product of SNAP Technologies, Bengaluru.
