@@ -1,5 +1,7 @@
 # Vaartix MCP server
 
+[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/vaartix-mail/vaartix-mcp)
+
 Let Claude, Cursor and other AI tools send and look up transactional email through
 [Vaartix](https://vaartix.com), the email API built in India.
 
